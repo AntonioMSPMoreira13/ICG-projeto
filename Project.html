@@ -39,6 +39,7 @@
         // Cena, câmera e renderizador
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const cameraOffset = new THREE.Vector3(0, 5, 10); // Offset from the planet
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
@@ -56,6 +57,10 @@
         // Criar o sistema solar
         const { planets, orbits } = createSolarSystem(scene);
 
+        // Configuração inicial da câmera
+        camera.position.set(0, 50, 180); // Reset camera position to focus on the Sun
+        camera.lookAt(0, 0, 0); // Ensure the camera looks at the Sun
+
         // Adicionar funcionalidades futuras (menu lateral)
         Drawermenu(scene, planets, orbits);
 
@@ -68,9 +73,6 @@
         // Luz ambiente
         const ambientLight = new THREE.AmbientLight(0x222222);
         scene.add(ambientLight);
-
-        // Configuração inicial da câmera
-        camera.position.set(0, 50, 180);
 
         // Variáveis para raycasting
         const raycaster = new THREE.Raycaster();
@@ -115,6 +117,13 @@
             }
         }
 
+        let targetPlanet = null; // Variable to store the planet to follow
+
+        // Function to set the target planet
+        function followPlanet(planetName) {
+            targetPlanet = planets.find(planet => planet.mesh.name === planetName);
+        }
+
         // Adicionar evento de clique
         window.addEventListener('click', onMouseClick);
 
@@ -130,9 +139,15 @@
             if (intersects.length > 0) {
                 const object = intersects[0].object;
 
-                // Executar ação associada ao clique
-                if (object.userData && object.userData.onClick) {
-                    object.userData.onClick();
+                // Check if the Sun is clicked
+                if (object.name === 'Sun') {
+                    targetPlanet = null; // Stop following any planet
+                    camera.position.set(0, 50, 180); // Reset camera position to focus on the Sun
+                    controls.target.set(0, 0, 0); // Reset OrbitControls target to the Sun
+                    controls.update(); // Ensure the controls are updated
+                } else {
+                    // Set the clicked planet as the target to follow
+                    followPlanet(object.name);
                 }
             }
         }
@@ -158,6 +173,17 @@
                     planet.ring.rotation.z += planet.ringRotationSpeed * rotationDirection; // Rotação do anel
                 }
             });
+
+            // Follow the target planet
+            if (targetPlanet) {
+                const planetPosition = targetPlanet.mesh.position.clone();
+                const cameraPosition = planetPosition.clone().add(cameraOffset);
+                camera.position.lerp(cameraPosition, 0.1); // Smooth transition
+
+                // Update OrbitControls target to look at the planet
+                controls.target.copy(planetPosition);
+                controls.update(); // Ensure the controls are updated
+            }
 
             controls.update(); // Atualiza os controles de órbita
             renderer.render(scene, camera);
@@ -194,6 +220,7 @@
 
 <body>
     <div id="Tag3DScene"></div>
+    <div id="planetName"></div> <!-- Add this element for displaying planet names -->
 </body>
 
 </html>

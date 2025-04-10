@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { startPlanetMiniGame } from '../planetMiniGame.js';
 
 export function createSolarSystem(scene) {
     const sundiameter = 9.2;
@@ -12,6 +11,7 @@ export function createSolarSystem(scene) {
         mercury: textureLoader.load('texture/Solar_sys/Mercury.jpg'),
         venus: textureLoader.load('texture/Solar_sys/Venus.jpg'),
         earth: textureLoader.load('texture/Solar_sys/Earth.jpg'),
+        moon: textureLoader.load('texture/Solar_sys/Moon.jpg'),
         mars: textureLoader.load('texture/Solar_sys/Mars.jpg'),
         jupiter: textureLoader.load('texture/Solar_sys/Jupiter.jpg'),
         saturn: textureLoader.load('texture/Solar_sys/Saturn.jpg'),
@@ -91,9 +91,7 @@ export function createSolarSystem(scene) {
         // Detectar clique em qualquer planeta
         planet.userData = {
             onClick: () => {
-                if (!document.body.classList.contains('menu-active')) {
-                    startPlanetMiniGame(data.name, data.texture); // Iniciar o mini-jogo com o planeta clicado
-                }
+
             }
         };
 
@@ -119,12 +117,11 @@ export function createSolarSystem(scene) {
 
         // Adicionar a Lua se o planeta for a Terra
         if (data.name === 'Earth') {
-            const moonTexture = textures.mercury; // Reuse Mercury's texture for the Moon
             const moonGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-            const moonMaterial = new THREE.MeshStandardMaterial({ map: moonTexture });
+            const moonMaterial = new THREE.MeshStandardMaterial({ color: 0xFFFFFF }); // White texture for visibility
             moon = new THREE.Mesh(moonGeometry, moonMaterial);
             moon.position.set(data.distance + moonOrbitRadius, 0, 0); // Initial Moon position
-            scene.add(moon);
+            scene.add(moon); // Adicionar a Lua diretamente à cena
 
             // Store Earth's data for Moon's orbit calculations
             data.moon = moon;
@@ -170,8 +167,13 @@ export function animateSolarSystem(planets, moon, paused) {
             // Atualizar órbita da Lua se ela existir
             if (planet.mesh.name === 'Earth' && moon) {
                 moonAngle += moonSpeed;
-                moon.position.x = Math.cos(moonAngle) * moonOrbitRadius + planet.mesh.position.x;
-                moon.position.z = Math.sin(moonAngle) * moonOrbitRadius + planet.mesh.position.z;
+                const moonX = Math.cos(moonAngle) * moonOrbitRadius;
+                const moonZ = Math.sin(moonAngle) * moonOrbitRadius;
+                moon.position.set(
+                    moonX + planet.mesh.position.x,
+                    planet.mesh.position.y,
+                    moonZ + planet.mesh.position.z
+                ); // Atualizar posição da Lua relativa à Terra
             }
         });
     }
