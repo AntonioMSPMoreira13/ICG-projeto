@@ -1,0 +1,271 @@
+/* Garantir que o corpo e o container ocupem toda a janela */
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Remove barras de rolagem */
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box; /* Garante que o tamanho inclua bordas e padding */
+}
+
+#Tag3DScene {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 1; /* Garante que o conteúdo 3D fique abaixo do menu */
+    margin: 0; /* Remove margens */
+    padding: 0; /* Remove padding */
+}
+
+body {
+    font-family: Arial, sans-serif;
+}
+
+.drawer {
+    position: absolute; /* Relativo ao container 3D */
+    top: 0;
+    left: -280px; /* Escondido fora da tela inicialmente */
+    width: 240px; /* Largura do menu */
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 20px;
+    transition: left 0.3s; /* Animação suave ao abrir/fechar */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 1001; /* Garante que o menu fique acima do conteúdo 3D */
+}
+
+.drawer.open {
+    left: 0; /* Quando aberto, o menu aparece do lado esquerdo */
+}
+
+.toggle-button {
+    position: absolute; /* Relativo ao container 3D */
+    top: 10px;
+    left: 10px;
+    width: 40px;
+    height: 40px;
+    background: url('texture/Menu.png') no-repeat center center;
+    background-color: white;
+    background-size: contain;
+    border: none;
+    cursor: pointer;
+    z-index: 1002; /* Garante que o botão fique acima do conteúdo 3D */
+    transition: transform 0.3s; /* Animação suave ao esconder */
+}
+
+.toggle-button.hidden {
+    transform: translateX(-100px); /* Move o botão para fora da tela */
+}
+
+.close-button {
+    align-self: flex-end; /* Posiciona o botão de fechar no canto superior direito do menu */
+    background-color: #444;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+}
+
+.close-button:hover {
+    background-color: #666; /* Cor ao passar o mouse */
+}
+
+.orbit-toggle-button {
+    background-color: #444; /* Estilo para o botão de alternar órbitas */
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+}
+
+.orbit-toggle-button:hover {
+    background-color: #666; /* Cor ao passar o mouse */
+}
+
+.slider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.slider-container label {
+    font-size: 14px;
+    color: white;
+}
+
+.slider-container input[type='range'] {
+    width: 100%;
+}
+
+/* Adicionar estilo para desativar interações quando um menu está ativo */
+.menu-active #Tag3DScene {
+    pointer-events: none; /* Desativa interações com o conteúdo 3D */
+    filter: blur(5px); /* Adiciona um efeito de desfoque para indicar inatividade */
+}
+
+.menu-active .toggle-button {
+    pointer-events: none; /* Desativa interações com o botão de alternar menu */
+    opacity: 0.5; /* Reduz a opacidade para indicar inatividade */
+}
+
+/* Score display */
+.score-display {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    font-size: 20px;
+}
+
+/* Lives display */
+.lives-display {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: white;
+    font-size: 20px;
+}
+
+/* Pause menu */
+.pause-menu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* Game over menu */
+.game-over-menu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* Game over title */
+.game-over-title {
+    color: white;
+    margin-bottom: 20px;
+}
+
+/* Game over score */
+.game-over-score {
+    color: white;
+    margin-bottom: 20px;
+}
+
+/* High score list */
+.high-score-list {
+    color: white;
+    margin-bottom: 20px;
+}
+
+/* Menu buttons */
+.menu-button {
+    padding: 10px 20px;
+    font-size: 20px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    background-color: #444;
+    color: white;
+    border: none;
+    text-align: center;
+}
+
+.menu-button:hover {
+    background-color: #666;
+}
+
+/* Main menu container */
+.main-menu {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 50px;
+    z-index: 1000;
+}
+
+/* High scores section */
+.high-scores-section {
+    color: white;
+    text-align: center;
+    width: 30%;
+}
+
+/* Button section */
+.button-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Menu title */
+.menu-title {
+    color: white;
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+/* Info section */
+.info-section {
+    color: white;
+    text-align: center;
+    width: 30%;
+}
+
+/* Menu buttons */
+.menu-button {
+    padding: 10px 20px;
+    font-size: 20px;
+    cursor: pointer;
+    background-color: #444;
+    color: white;
+    border: none;
+    text-align: center;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.menu-button:hover {
+    background-color: #666;
+}
+
+/* High score list */
+.high-scores-section ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    color: white;
+}

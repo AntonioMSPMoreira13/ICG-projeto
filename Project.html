@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<!--
+
+		Example adapted from Damien Rohmer tutorial
+
+		https://imagecomputing.net/damien.rohmer/teaching/2019_2020/semester_1/MPRI_2-39/practice/threejs/content/000_threejs_tutorial/index.html
+
+		J. Madeira - April 2021; Updated - March 2024
+
+-->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title> 3D scene </title>
+
+    <link rel="stylesheet" href="Project.css">
+    <!-- Corrigido o caminho do arquivo CSS -->
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://threejs.org/build/three.module.js",
+            "three/addons/": "https://threejs.org/examples/jsm/"
+          }
+        }
+      </script>
+
+    <script type="module">
+
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { createSolarSystem } from './solarSystem.js';
+        import { Drawermenu } from './DrawerMenu.js';
+
+        // Cena, câmera e renderizador
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('Tag3DScene').appendChild(renderer.domElement);
+
+        // Controles de câmera
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; // Suaviza o movimento
+        controls.dampingFactor = 0.05; // Fator de amortecimento
+        controls.enableZoom = true; // Permite o zoom
+        controls.enablePan = false; // Permite o movimento lateral
+        controls.maxDistance = 400; // Distância máxima de zoom
+        controls.minDistance = 10; // Distância mínima de zoom
+
+        // Criar o sistema solar
+        const { planets, orbits } = createSolarSystem(scene);
+
+        // Adicionar funcionalidades futuras (menu lateral)
+        Drawermenu(scene, planets, orbits);
+
+        // Luz do Sol
+        const sunLight = new THREE.PointLight(0xffffff, 9, 400, 0.1);
+        sunLight.position.set(0, 0, 0);
+        sunLight.castShadow = true;
+        scene.add(sunLight);
+
+        // Luz ambiente
+        const ambientLight = new THREE.AmbientLight(0x222222);
+        scene.add(ambientLight);
+
+        // Configuração inicial da câmera
+        camera.position.set(0, 50, 180);
+
+        // Variáveis para raycasting
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let highlightedObject = null;
+        const planetNameElement = document.getElementById('planetName');
+
+        // Adicionar evento de movimento do mouse
+        window.addEventListener('mousemove', onMouseMove);
+
+        function onMouseMove(event) {
+            // Atualizar as coordenadas do mouse
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Realizar o raycasting
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(planets.map(p => p.mesh).concat(sunLight));
+
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+
+                // Destacar o objeto sob o mouse
+                if (highlightedObject !== object) {
+                    if (highlightedObject) {
+                        highlightedObject.material.emissive.set(0x000000); // Remover destaque do objeto anterior
+                    }
+                    highlightedObject = object;
+                    highlightedObject.material.emissive.set(0x444444); // Adicionar destaque ao novo objeto
+
+                    // Exibir o nome do planeta ou do Sol
+                    planetNameElement.innerText = object.name || 'Unknown';
+                    planetNameElement.style.display = 'block';
+                }
+            } else if (highlightedObject) {
+                // Remover destaque se nenhum objeto estiver sob o mouse
+                highlightedObject.material.emissive.set(0x000000);
+                highlightedObject = null;
+
+                // Esconder o nome do planeta
+                planetNameElement.style.display = 'none';
+            }
+        }
+
+        // Adicionar evento de clique
+        window.addEventListener('click', onMouseClick);
+
+        function onMouseClick(event) {
+            // Atualizar as coordenadas do mouse
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Realizar o raycasting
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(planets.map(p => p.mesh));
+
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+
+                // Executar ação associada ao clique
+                if (object.userData && object.userData.onClick) {
+                    object.userData.onClick();
+                }
+            }
+        }
+
+        // loop de animação
+        function animate() {
+            requestAnimationFrame(animate);
+
+            planets.forEach(planet => {
+                // Atualizar a posição orbital
+                planet.angle += planet.speed;
+                planet.mesh.position.x = Math.cos(planet.angle) * planet.distance;
+                planet.mesh.position.z = Math.sin(planet.angle) * planet.distance;
+
+                // Atualizar a rotação no próprio eixo
+                const rotationDirection = planet.clockwise ? -1 : 1; // Sentido horário ou anti-horário
+                planet.mesh.rotation.y += rotationDirection * planet.rotationSpeed;
+
+                // Atualizar a posição e rotação do anel (se existir)
+                if (planet.ring) {
+                    planet.ring.position.x = planet.mesh.position.x;
+                    planet.ring.position.z = planet.mesh.position.z;
+                    planet.ring.rotation.z += planet.ringRotationSpeed * rotationDirection; // Rotação do anel
+                }
+            });
+
+            controls.update(); // Atualiza os controles de órbita
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Responsividade
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+
+    <style>
+        #planetName {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            display: none;
+            z-index: 1003;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div id="Tag3DScene"></div>
+</body>
+
+</html>
