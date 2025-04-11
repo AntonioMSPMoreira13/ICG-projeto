@@ -59,9 +59,12 @@ Este projeto foi desenvolvido com base em `Three.js` e simula um sistema solar i
 - `Project.css`: estilo visual da interface
 
 ---
+# Link para a Demo
+https://antoniomspmoreira13.github.io/ICG-projeto/index
 
-# Links
+## Links
 Planet images:
 https://www.fab.com/listings/f6df77fc-df73-4d6e-aab1-e0ccc2261a59
 
+##
 Desenvolvido por António Moreira - 93279

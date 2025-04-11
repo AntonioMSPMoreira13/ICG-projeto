@@ -42,6 +42,13 @@ export function createSolarSystem(scene) {
     const sun = new THREE.Mesh(sunGeometry, sunMaterial);
     sun.name = 'Sun'; // Adicionar o nome do Sol
     sun.castShadow = false;
+    sun.userData = {
+        onClick: () => {
+            // Dispatch an event to handle the Sun click
+            const event = new CustomEvent('objectClicked', { detail: { name: 'Sun', resetCamera: true } });
+            window.dispatchEvent(event);
+        }
+    };
     scene.add(sun);
 
     // Criar planetas e suas órbitas
@@ -91,7 +98,9 @@ export function createSolarSystem(scene) {
         // Detectar clique em qualquer planeta
         planet.userData = {
             onClick: () => {
-
+                // Dispatch an event to handle the planet click
+                const event = new CustomEvent('objectClicked', { detail: { name: data.name, resetCamera: false } });
+                window.dispatchEvent(event);
             }
         };
 

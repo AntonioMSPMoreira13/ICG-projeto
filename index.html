@@ -124,6 +124,26 @@
             targetPlanet = planets.find(planet => planet.mesh.name === planetName);
         }
 
+        // Add event listener for object clicks (Sun or planets)
+        window.addEventListener('objectClicked', (event) => {
+            const { name, resetCamera } = event.detail;
+
+            if (resetCamera) {
+                // Reset the camera to its initial state for the Sun
+                targetPlanet = null;
+                camera.position.set(0, 50, 180); // Reset camera position
+                controls.target.set(0, 0, 0); // Reset OrbitControls target
+                controls.update();
+            } else {
+                // Follow the clicked planet
+                followPlanet(name);
+            }
+
+            // Display the object's name
+            planetNameElement.innerText = name;
+            planetNameElement.style.display = 'block';
+        });
+
         // Adicionar evento de clique
         window.addEventListener('click', onMouseClick);
 
@@ -134,21 +154,26 @@
 
             // Realizar o raycasting
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(planets.map(p => p.mesh));
+            const intersects = raycaster.intersectObjects(planets.map(p => p.mesh).concat(sunLight)); // Include the Sun in raycasting
 
             if (intersects.length > 0) {
                 const object = intersects[0].object;
 
-                // Check if the Sun is clicked
-                if (object.name === 'Sun') {
-                    targetPlanet = null; // Stop following any planet
-                    camera.position.set(0, 50, 180); // Reset camera position to focus on the Sun
-                    controls.target.set(0, 0, 0); // Reset OrbitControls target to the Sun
-                    controls.update(); // Ensure the controls are updated
-                } else {
-                    // Set the clicked planet as the target to follow
-                    followPlanet(object.name);
+                // Trigger the onClick function for the clicked object
+                if (object.userData && object.userData.onClick) {
+                    object.userData.onClick();
                 }
+
+                // Highlight the selected object
+                if (highlightedObject) {
+                    highlightedObject.material.emissive.set(0x000000); // Remove highlight from the previous object
+                }
+                highlightedObject = object;
+                highlightedObject.material.emissive.set(0x444444); // Highlight the selected object
+
+                // Display the object's name
+                planetNameElement.innerText = object.name || 'Unknown';
+                planetNameElement.style.display = 'block';
             }
         }
 
