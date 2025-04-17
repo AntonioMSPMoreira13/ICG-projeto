@@ -57,17 +57,26 @@
         // Criar o sistema solar
         const { planets, orbits } = createSolarSystem(scene);
 
+        // Ensure the Moon's properties are initialized
+        planets.forEach(planet => {
+            if (planet.moon) {
+                planet.moon.angle = 0; // Initialize the Moon's orbital angle
+                planet.moon.speed = 0.05; // Set the Moon's orbital speed
+            }
+        });
+
         // Configuração inicial da câmera
-        camera.position.set(0, 50, 180); // Reset camera position to focus on the Sun
+        camera.position.set(0, 30, 100); // Adjust camera position for better view of the scaled system
         camera.lookAt(0, 0, 0); // Ensure the camera looks at the Sun
 
         // Adicionar funcionalidades futuras (menu lateral)
         Drawermenu(scene, planets, orbits);
 
         // Luz do Sol
-        const sunLight = new THREE.PointLight(0xffffff, 9, 400, 0.1);
+        const sunLight = new THREE.PointLight(0xffffff, 5, 5000, 0.5); // Adjust intensity and range
         sunLight.position.set(0, 0, 0);
         sunLight.castShadow = true;
+        sunLight.name = "Sun"; // Add a name property to the Sun
         scene.add(sunLight);
 
         // Luz ambiente
@@ -122,6 +131,14 @@
         // Function to set the target planet
         function followPlanet(planetName) {
             targetPlanet = planets.find(planet => planet.mesh.name === planetName);
+
+            // Show the reset camera button if a planet is selected
+            const resetButton = document.getElementById('resetCameraButton');
+            if (targetPlanet) {
+                resetButton.style.display = 'block';
+            } else {
+                resetButton.style.display = 'none';
+            }
         }
 
         // Add event listener for object clicks (Sun or planets)
@@ -159,9 +176,14 @@
             if (intersects.length > 0) {
                 const object = intersects[0].object;
 
-                // Trigger the onClick function for the clicked object
-                if (object.userData && object.userData.onClick) {
-                    object.userData.onClick();
+                // Reset camera if the Sun is clicked and no planet is selected
+                if (object.name === "Sun" && targetPlanet === null) {
+                    camera.position.set(0, 50, 180); // Reset camera position
+                    controls.target.set(0, 0, 0); // Reset OrbitControls target
+                    controls.update();
+                } else if (object.name !== "Sun") {
+                    // Follow the clicked planet
+                    followPlanet(object.name);
                 }
 
                 // Highlight the selected object
@@ -176,6 +198,17 @@
                 planetNameElement.style.display = 'block';
             }
         }
+
+        // Add event listener for the reset camera button
+        document.getElementById('resetCameraButton').addEventListener('click', () => {
+            targetPlanet = null; // Clear the target planet
+            camera.position.set(0, 50, 180); // Reset camera position
+            controls.target.set(0, 0, 0); // Reset OrbitControls target
+            controls.update();
+
+            // Hide the reset camera button
+            document.getElementById('resetCameraButton').style.display = 'none';
+        });
 
         // loop de animação
         function animate() {
@@ -197,9 +230,17 @@
                     planet.ring.position.z = planet.mesh.position.z;
                     planet.ring.rotation.z += planet.ringRotationSpeed * rotationDirection; // Rotação do anel
                 }
+
+                // Atualizar a posição da Lua (se existir)
+                if (planet.moon) {
+                    const moon = planet.moon;
+                    moon.angle += moon.speed; // Atualizar o ângulo orbital da Lua
+                    moon.mesh.position.x = planet.mesh.position.x + Math.cos(moon.angle) * moon.distance;
+                    moon.mesh.position.z = planet.mesh.position.z + Math.sin(moon.angle) * moon.distance;
+                }
             });
 
-            // Follow the target planet
+            // Follow the target planet if one is selected
             if (targetPlanet) {
                 const planetPosition = targetPlanet.mesh.position.clone();
                 const cameraPosition = planetPosition.clone().add(cameraOffset);
@@ -207,10 +248,9 @@
 
                 // Update OrbitControls target to look at the planet
                 controls.target.copy(planetPosition);
-                controls.update(); // Ensure the controls are updated
             }
 
-            controls.update(); // Atualiza os controles de órbita
+            controls.update(); // Always update the controls for manual interaction
             renderer.render(scene, camera);
         }
         animate();
@@ -246,6 +286,7 @@
 <body>
     <div id="Tag3DScene"></div>
     <div id="planetName"></div> <!-- Add this element for displaying planet names -->
+    <button id="resetCameraButton" style="position: absolute; top: 50px; left: 50%; transform: translateX(-50%); z-index: 1003; padding: 10px 20px; font-size: 14px; cursor: pointer; display: none;">Reset Camera</button>
 </body>
 
 </html>

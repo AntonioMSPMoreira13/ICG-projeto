@@ -16,6 +16,31 @@ export function startAsteroidGame() {
     document.body.innerHTML = ''; // Limpa o conteúdo atual da página
     document.body.appendChild(renderer.domElement);
 
+    // Adicionar fundo com textura de estrelas
+    const textureLoader = new THREE.TextureLoader();
+    const starTexture = textureLoader.load('texture/fundo.jpg', () => {
+        const backgroundGeometry = new THREE.SphereGeometry(500, 64, 32);
+        const backgroundMaterial = new THREE.MeshStandardMaterial({
+            map: starTexture,
+            side: THREE.BackSide // Renderiza a textura do lado interno da esfera
+        });
+        const backgroundSphere = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+        scene.add(backgroundSphere);
+    });
+
+    // Adicionar o Sol ao centro
+    const sunTexture = textureLoader.load('texture/Solar_sys/Sun.jpg');
+    const sunGeometry = new THREE.SphereGeometry(5, 32, 32);
+    const sunMaterial = new THREE.MeshStandardMaterial({
+        map: sunTexture,
+        emissive: 0xFFFF00,
+        emissiveIntensity: 1,
+        emissiveMap: sunTexture
+    });
+    const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+    sun.position.set(0, 0, -50); // Posicionar o Sol no fundo
+    scene.add(sun);
+
     // Luz ambiente
     const ambientLight = new THREE.AmbientLight(0x404040, 2);
     scene.add(ambientLight);

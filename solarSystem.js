@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export function createSolarSystem(scene) {
-    const sundiameter = 9.2;
+    const sundiameter = 5.0; // Reduce the Sun's size for better scaling
 
     // Carregar texturas
     //obtidas de https://www.fab.com/listings/f6df77fc-df73-4d6e-aab1-e0ccc2261a59
@@ -22,7 +22,7 @@ export function createSolarSystem(scene) {
 
     // Criar a esfera gigante para o fundo com textura de estrelas
     const starTexture = textureLoader.load('texture/fundo.jpg', () => {
-        const backgroundGeometry = new THREE.SphereGeometry(350, 64, 32);
+        const backgroundGeometry = new THREE.SphereGeometry(500, 64, 32); // Increase background size
         const backgroundMaterial = new THREE.MeshStandardMaterial({ 
             map: starTexture,
             side: THREE.BackSide // Renderiza a textura do lado interno da esfera
@@ -56,21 +56,18 @@ export function createSolarSystem(scene) {
     const orbits = [];
 
     const planetData = [
-        { name: 'Mercury', texture: textures.mercury, distance: sundiameter + 3.9, size: 0.7, speed: 0.04, rotationSpeed: 0.005, clockwise: false },
-        { name: 'Venus', texture: textures.venus, distance: sundiameter + 7.2, size: 1.2, speed: 0.03, rotationSpeed: 0.002, clockwise: true },
-        { name: 'Earth', texture: textures.earth, distance: sundiameter + 10, size: 1.7, speed: 0.02, rotationSpeed: 0.01, clockwise: false },
-        { name: 'Mars', texture: textures.mars, distance: sundiameter + 15.2, size: 1, speed: 0.015, rotationSpeed: 0.008, clockwise: false },
-        { name: 'Jupiter', texture: textures.jupiter, distance: sundiameter + 52, size: 5.2, speed: 0.008, rotationSpeed: 0.02, clockwise: false },
-        { name: 'Saturn', texture: textures.saturn, distance: sundiameter + 95.4, size: 4.2, speed: 0.006, rotationSpeed: 0.018, clockwise: false },
-        { name: 'Uranus', texture: textures.uranus, distance: sundiameter + 192.2, size: 3.2, speed: 0.004, rotationSpeed: 0.01, clockwise: true },
-        { name: 'Neptune', texture: textures.neptune, distance: sundiameter + 300.6, size: 3, speed: 0.002, rotationSpeed: 0.012, clockwise: false }
+        { name: 'Mercury', texture: textures.mercury, distance: sundiameter + 8, size: 0.4, speed: 0.04, rotationSpeed: 0.005, clockwise: false },
+        { name: 'Venus', texture: textures.venus, distance: sundiameter + 12, size: 0.9, speed: 0.03, rotationSpeed: 0.002, clockwise: true },
+        { name: 'Earth', texture: textures.earth, distance: sundiameter + 16, size: 1.0, speed: 0.02, rotationSpeed: 0.01, clockwise: false, hasMoon: true },
+        { name: 'Mars', texture: textures.mars, distance: sundiameter + 22, size: 0.7, speed: 0.015, rotationSpeed: 0.008, clockwise: false },
+        { name: 'Jupiter', texture: textures.jupiter, distance: sundiameter + 60, size: 3.5, speed: 0.008, rotationSpeed: 0.02, clockwise: false },
+        { name: 'Saturn', texture: textures.saturn, distance: sundiameter + 100, size: 2.8, speed: 0.006, rotationSpeed: 0.018, clockwise: false },
+        { name: 'Uranus', texture: textures.uranus, distance: sundiameter + 150, size: 2.0, speed: 0.004, rotationSpeed: 0.01, clockwise: true },
+        { name: 'Neptune', texture: textures.neptune, distance: sundiameter + 200, size: 1.9, speed: 0.002, rotationSpeed: 0.012, clockwise: false }
     ];
 
     let paused = false; // Pause state
-    let moon = null; // Moon object
     let moonAngle = 0; // Moon's orbital angle
-    const moonOrbitRadius = 2.5; // Moon's orbit radius
-    const moonSpeed = 0.02; // Moon's orbital speed
 
     planetData.forEach(data => {
         // Criar o planeta
@@ -125,15 +122,21 @@ export function createSolarSystem(scene) {
         }
 
         // Adicionar a Lua se o planeta for a Terra
-        if (data.name === 'Earth') {
-            const moonGeometry = new THREE.SphereGeometry(0.5, 32, 32);
-            const moonMaterial = new THREE.MeshStandardMaterial({ color: 0xFFFFFF }); // White texture for visibility
-            moon = new THREE.Mesh(moonGeometry, moonMaterial);
-            moon.position.set(data.distance + moonOrbitRadius, 0, 0); // Initial Moon position
-            scene.add(moon); // Adicionar a Lua diretamente à cena
+        if (data.name === 'Earth' && data.hasMoon) {
+            const moonGeometry = new THREE.SphereGeometry(0.3, 32, 32); // Adjust Moon size
+            const moonMaterial = new THREE.MeshStandardMaterial({ map: textures.moon });
+            const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+            moon.position.set(data.distance + 3, 0, 0); // Adjust Moon distance relative to Earth
+            moon.name = 'Moon';
+            scene.add(moon);
 
-            // Store Earth's data for Moon's orbit calculations
-            data.moon = moon;
+            // Attach the Moon to the Earth
+            planetDataEntry.moon = {
+                mesh: moon,
+                distance: 3, // Moon's orbit radius
+                angle: 0, // Initial orbital angle
+                speed: 0.05 // Moon's orbital speed
+            };
         }
 
         planets.push(planetDataEntry);
@@ -160,11 +163,11 @@ export function createSolarSystem(scene) {
         }
     });
 
-    return { planets, orbits, sun, moon, paused };
+    return { planets, orbits, sun, paused };
 }
 
 // Atualizar o loop de animação para lidar com pausa e órbita da Lua
-export function animateSolarSystem(planets, moon, paused) {
+export function animateSolarSystem(planets, paused) {
     if (!paused) {
         planets.forEach(planet => {
             // Atualizar órbita e rotação dos planetas
@@ -174,11 +177,11 @@ export function animateSolarSystem(planets, moon, paused) {
             planet.mesh.rotation.y += planet.rotationSpeed;
 
             // Atualizar órbita da Lua se ela existir
-            if (planet.mesh.name === 'Earth' && moon) {
-                moonAngle += moonSpeed;
-                const moonX = Math.cos(moonAngle) * moonOrbitRadius;
-                const moonZ = Math.sin(moonAngle) * moonOrbitRadius;
-                moon.position.set(
+            if (planet.mesh.name === 'Earth' && planet.moon) {
+                planet.moon.angle += planet.moon.speed;
+                const moonX = Math.cos(planet.moon.angle) * planet.moon.distance;
+                const moonZ = Math.sin(planet.moon.angle) * planet.moon.distance;
+                planet.moon.mesh.position.set(
                     moonX + planet.mesh.position.x,
                     planet.mesh.position.y,
                     moonZ + planet.mesh.position.z
