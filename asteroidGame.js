@@ -1,9 +1,39 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeVertices } from 'https://threejs.org/examples/jsm/utils/BufferGeometryUtils.js'; // Use URL for import
 
 let gameActive = false; // Flag to track if the game is active
 let gamePaused = false; // Flag to track if the game is paused
 
+// Function to generate a procedural asteroid
+function createProceduralAsteroid() {
+    const geometry = new THREE.IcosahedronGeometry(1.2, 2); // Base geometry with subdivisions
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x8b4513, // Brownish color for a rocky appearance
+        roughness: 0.8,
+        metalness: 0.2
+    });
+
+    // Apply noise to vertices for irregular shape
+    const positionAttribute = geometry.attributes.position;
+    for (let i = 0; i < positionAttribute.count; i++) {
+        const x = positionAttribute.getX(i);
+        const y = positionAttribute.getY(i);
+        const z = positionAttribute.getZ(i);
+
+        const noise = (Math.random() - 0.5) * 0.5; // Random noise factor
+        positionAttribute.setXYZ(i, x + noise, y + noise, z + noise);
+    }
+
+    // Merge vertices to fix holes
+    const mergedGeometry = mergeVertices(geometry);
+
+    mergedGeometry.computeVertexNormals(); // Recalculate normals for proper lighting
+    return new THREE.Mesh(mergedGeometry, material);
+}
+
+// Exported function to start the asteroid game
 export function startAsteroidGame() {
     gameActive = true; // Activate the game
     gamePaused = false; // Ensure the game is not paused
@@ -66,23 +96,35 @@ export function startAsteroidGame() {
     const coins = [];
     const asteroids = [];
     const asteroidGeometry = new THREE.SphereGeometry(1.2, 16, 16); // Asteroids are now larger
-    const coinGeometry = new THREE.SphereGeometry(0.8, 16, 16); // Smaller for coins
+    const coinGeometry = new THREE.CylinderGeometry(1, 1, 0.2, 32); // Diameter matches the ship, thin height
     let coinExists = false;
 
     function spawnAsteroidOrCoin() {
         const isCoin = !coinExists && Math.random() > 0.7; // Only one coin at a time
-        const color = isCoin ? 0xffff00 : 0xff0000; // Yellow for coin, red for asteroid
-        const material = new THREE.MeshStandardMaterial({ color });
-        const object = new THREE.Mesh(isCoin ? coinGeometry : asteroidGeometry, material);
-        object.userData = { isCoin };
-        object.position.set(
-            (Math.random() - 0.5) * 20,
-            (Math.random() - 0.5) * 20,
-            -50
-        );
-        if (isCoin) coinExists = true;
-        (isCoin ? coins : asteroids).push(object);
-        scene.add(object);
+        if (isCoin) {
+            const material = new THREE.MeshStandardMaterial({ color: 0xffff00 }); // Yellow for coin
+            const coin = new THREE.Mesh(coinGeometry, material);
+            coin.userData = { isCoin: true };
+            coin.position.set(
+                (Math.random() - 0.5) * 20,
+                (Math.random() - 0.5) * 20,
+                -50
+            );
+            coin.rotation.x = Math.PI / 2; // Rotate to face the player
+            coinExists = true;
+            coins.push(coin);
+            scene.add(coin);
+        } else {
+            const asteroid = createProceduralAsteroid(); // Use procedural asteroid
+            asteroid.userData = { isCoin: false };
+            asteroid.position.set(
+                (Math.random() - 0.5) * 20,
+                (Math.random() - 0.5) * 20,
+                -50
+            );
+            asteroids.push(asteroid);
+            scene.add(asteroid);
+        }
     }
 
     // Pontuação, nível e vidas
@@ -122,7 +164,6 @@ export function startAsteroidGame() {
         controls[event.key.toLowerCase()] = true;
         if (event.key === 'Escape') pauseGame();
     });
-
     window.addEventListener('keyup', (event) => {
         controls[event.key.toLowerCase()] = false;
     });
@@ -203,6 +244,11 @@ export function startAsteroidGame() {
 
         const planetName = planetOrder[currentPlanetIndex];
         const planetTexture = planetTextures[planetName];
+        if (!planetTexture) {
+            console.error(`Texture for planet ${planetName} not loaded.`);
+            return;
+        }
+
         const planetSize = planetName === 'Sun' ? 10 : 3; // Sun is larger
         const planetGeometry = new THREE.SphereGeometry(planetSize, 32, 32);
         const planetMaterial = new THREE.MeshStandardMaterial({ map: planetTexture });
@@ -246,7 +292,7 @@ export function startAsteroidGame() {
 
         if (currentPlanetIndex < planetOrder.length - 1) {
             currentPlanetIndex++; // Move to the next planet
-            const previousSidePosition = currentPlanet.position.x; // Get the side position of the current planet
+            const previousSidePosition = currentPlanet ? currentPlanet.position.x : 0; // Safely get the side position
             addPlanetForLevel(); // Add the new planet
             addNextPlanet(previousSidePosition); // Add the next planet on the same side
         } else {
@@ -301,6 +347,7 @@ export function startAsteroidGame() {
 
         coins.forEach((coin, index) => {
             coin.position.z += asteroidSpeed;
+            coin.rotation.y += 0.1; // Add spinning animation to the coin
             if (coin.position.z > 10) {
                 scene.remove(coin);
                 coins.splice(index, 1);
@@ -343,29 +390,46 @@ export function startAsteroidGame() {
 
     // Função de pausa
     function pauseGame() {
-        gamePaused = true;
-        const pauseMenu = document.createElement('div');
-        pauseMenu.className = 'pause-menu'; // Use class instead of inline styles
+        if (!gamePaused) {
+            gamePaused = true;
+            const pauseMenu = document.createElement('div');
+            pauseMenu.className = 'pause-menu'; // Use class instead of inline styles
 
-        const resumeButton = document.createElement('button');
-        resumeButton.className = 'menu-button'; // Use class instead of inline styles
-        resumeButton.innerText = 'Resume';
-        resumeButton.onclick = () => {
-            gamePaused = false; // Retomar o jogo
-            pauseMenu.remove(); // Remover o menu de pausa
-            animate(); // Reiniciar o loop de animação
-        };
-        pauseMenu.appendChild(resumeButton);
+            const resumeButton = document.createElement('button');
+            resumeButton.className = 'menu-button'; // Use class instead of inline styles
+            resumeButton.innerText = 'Resume';
+            resumeButton.onclick = () => {
+                gamePaused = false; // Resume the game
+                pauseMenu.remove(); // Close the pause menu
+                animate(); // Restart the animation loop
+            };
+            pauseMenu.appendChild(resumeButton);
 
-        const menuButton = document.createElement('button');
-        menuButton.className = 'menu-button'; // Use class instead of inline styles
-        menuButton.innerText = 'Menu';
-        menuButton.onclick = () => {
-            gameOver(); // Trigger game over when quitting to the menu
-        };
-        pauseMenu.appendChild(menuButton);
+            const menuButton = document.createElement('button');
+            menuButton.className = 'menu-button'; // Use class instead of inline styles
+            menuButton.innerText = 'Menu';
+            menuButton.onclick = () => {
+                gameActive = false; // End the game
+                gamePaused = false; // Ensure the game is not paused
+                lives = 0; // Set lives to 0 to trigger game over
+                pauseMenu.remove(); // Close the pause menu
+                gameOver(); // Trigger the game over menu
+            };
+            pauseMenu.appendChild(menuButton);
 
-        document.body.appendChild(pauseMenu);
+            document.body.appendChild(pauseMenu);
+
+            // Add event listener for "Escape" key to toggle the pause menu
+            function handleEscape(event) {
+                if (event.key === 'Escape') {
+                    gamePaused = false; // Resume the game
+                    pauseMenu.remove(); // Close the pause menu
+                    animate(); // Restart the animation loop
+                    window.removeEventListener('keydown', handleEscape); // Remove listener after resuming
+                }
+            }
+            window.addEventListener('keydown', handleEscape);
+        }
     }
 
     // Função de game over
@@ -388,7 +452,6 @@ export function startAsteroidGame() {
 
             return; // Não termina o jogo ainda
         }
-
         gameActive = false; // Stop the game
         gamePaused = true; // Ensure animations stop
         highScores.push(score);
@@ -508,7 +571,6 @@ export function startAsteroidGameMenu() {
         highScoreList.innerHTML = '<li>0</li><li>0</li><li>0</li><li>0</li><li>0</li>'; // Atualiza a lista na interface
     };
     highScoreSection.appendChild(resetButton);
-
     menu.appendChild(highScoreSection);
 
     // Seção de botões (centro)
@@ -536,7 +598,6 @@ export function startAsteroidGameMenu() {
         location.reload(); // Retorna ao menu principal do sistema solar
     };
     buttonSection.appendChild(quitButton);
-
     menu.appendChild(buttonSection);
 
     // Seção de controles e explicação de cores (direita)
