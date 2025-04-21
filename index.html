@@ -132,13 +132,15 @@
         function followPlanet(planetName) {
             targetPlanet = planets.find(planet => planet.mesh.name === planetName);
 
+            // Update OrbitControls target to follow the selected planet
+            if (targetPlanet) {
+                controls.target.copy(targetPlanet.mesh.position);
+                controls.update();
+            }
+
             // Show the reset camera button if a planet is selected
             const resetButton = document.getElementById('resetCameraButton');
-            if (targetPlanet) {
-                resetButton.style.display = 'block';
-            } else {
-                resetButton.style.display = 'none';
-            }
+            resetButton.style.display = targetPlanet ? 'block' : 'none';
         }
 
         // Add event listener for object clicks (Sun or planets)
@@ -242,12 +244,7 @@
 
             // Follow the target planet if one is selected
             if (targetPlanet) {
-                const planetPosition = targetPlanet.mesh.position.clone();
-                const cameraPosition = planetPosition.clone().add(cameraOffset);
-                camera.position.lerp(cameraPosition, 0.1); // Smooth transition
-
-                // Update OrbitControls target to look at the planet
-                controls.target.copy(planetPosition);
+                controls.target.copy(targetPlanet.mesh.position); // Update OrbitControls target
             }
 
             controls.update(); // Always update the controls for manual interaction

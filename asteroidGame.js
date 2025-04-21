@@ -42,17 +42,17 @@ export function startAsteroidGame() {
     scene.add(sun);
 
     // Luz ambiente
-    const ambientLight = new THREE.AmbientLight(0x404040, 2);
+    const ambientLight = new THREE.AmbientLight(0x404040, 1); // Reduced intensity
     scene.add(ambientLight);
 
-    // Luzes laterais
-    const leftLight = new THREE.PointLight(0xffffff, 1, 100);
-    leftLight.position.set(-50, 0, 0); // Posição à esquerda
-    scene.add(leftLight);
+    // Add soft white lights above and below the camera
+    const topLight = new THREE.DirectionalLight(0xffffff, 0.5); // Light above the camera
+    topLight.position.set(0, 50, 0);
+    scene.add(topLight);
 
-    const rightLight = new THREE.PointLight(0xffffff, 1, 100);
-    rightLight.position.set(50, 0, 0); // Posição à direita
-    scene.add(rightLight);
+    const bottomLight = new THREE.DirectionalLight(0xffffff, 0.5); // Light below the camera
+    bottomLight.position.set(0, -50, 0);
+    scene.add(bottomLight);
 
     // Nave do jogador
     const shipGeometry = new THREE.ConeGeometry(1, 2, 32);
@@ -174,7 +174,115 @@ export function startAsteroidGame() {
         });
     }
 
-    // Atualizar objetos
+    // Planets for levels
+    const planetTextures = {
+        Neptune: textureLoader.load('texture/Solar_sys/Neptune.jpg'),
+        Uranus: textureLoader.load('texture/Solar_sys/Uranus.jpg'),
+        Saturn: textureLoader.load('texture/Solar_sys/Saturn.jpg'),
+        Jupiter: textureLoader.load('texture/Solar_sys/Jupiter.jpg'),
+        Mars: textureLoader.load('texture/Solar_sys/Mars.jpg'),
+        Earth: textureLoader.load('texture/Solar_sys/Earth.jpg'),
+        Venus: textureLoader.load('texture/Solar_sys/Venus.jpg'),
+        Mercury: textureLoader.load('texture/Solar_sys/Mercury.jpg'),
+        Sun: textureLoader.load('texture/Solar_sys/Sun.jpg')
+    };
+
+    const planetOrder = [
+        'Neptune', 'Uranus', 'Saturn', 'Jupiter', 'Mars', 'Earth', 'Venus', 'Mercury', 'Sun'
+    ];
+
+    let currentPlanetIndex = 0;
+    let currentPlanet = null;
+    let nextPlanet = null;
+
+    // Function to add a planet for the current level
+    function addPlanetForLevel() {
+        if (currentPlanet) {
+            scene.remove(currentPlanet); // Remove the previous planet
+        }
+
+        const planetName = planetOrder[currentPlanetIndex];
+        const planetTexture = planetTextures[planetName];
+        const planetSize = planetName === 'Sun' ? 10 : 3; // Sun is larger
+        const planetGeometry = new THREE.SphereGeometry(planetSize, 32, 32);
+        const planetMaterial = new THREE.MeshStandardMaterial({ map: planetTexture });
+        currentPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
+
+        // Position the planet to the side as a background
+        const sidePosition = Math.random() > 0.5 ? 30 : -30; // Randomly choose left or right
+        currentPlanet.position.set(sidePosition, 0, -50); // Position the planet to the side
+        scene.add(currentPlanet);
+
+        // Add the next planet for the upcoming level
+        addNextPlanet(sidePosition); // Pass the same side position
+    }
+
+    // Function to add the next planet for the upcoming level
+    function addNextPlanet(sidePosition) {
+        if (nextPlanet) {
+            scene.remove(nextPlanet); // Remove the previous next planet
+        }
+
+        const nextPlanetIndex = currentPlanetIndex + 1;
+        if (nextPlanetIndex < planetOrder.length) {
+            const planetName = planetOrder[nextPlanetIndex];
+            const planetTexture = planetTextures[planetName];
+            const planetSize = planetName === 'Sun' ? 10 : 3; // Sun is larger
+            const planetGeometry = new THREE.SphereGeometry(planetSize, 32, 32);
+            const planetMaterial = new THREE.MeshStandardMaterial({ map: planetTexture });
+            nextPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
+
+            // Position the next planet on the same side as the current planet
+            nextPlanet.position.set(sidePosition, 0, -100); // Position the next planet further back
+            scene.add(nextPlanet);
+        }
+    }
+
+    // Call this function when the level changes
+    function levelUp() {
+        level++;
+        asteroidSpeed += 0.05; // Slightly increase asteroid speed
+        for (let i = 0; i < 5 + level; i++) spawnAsteroidOrCoin(); // Add more asteroids as the level increases
+
+        if (currentPlanetIndex < planetOrder.length - 1) {
+            currentPlanetIndex++; // Move to the next planet
+            const previousSidePosition = currentPlanet.position.x; // Get the side position of the current planet
+            addPlanetForLevel(); // Add the new planet
+            addNextPlanet(previousSidePosition); // Add the next planet on the same side
+        } else {
+            // If the player reaches the Sun, stop adding planets
+            currentPlanetIndex = planetOrder.length - 1;
+        }
+    }
+
+    // Update the planets' sizes and positions
+    function updatePlanetSize() {
+        if (currentPlanet) {
+            const scaleFactor = 1 + score / 500; // Slower scaling factor
+            currentPlanet.scale.set(scaleFactor, scaleFactor, scaleFactor);
+
+            // Move the current planet forward even slower
+            currentPlanet.position.z += 0.02; // Very slow forward movement
+            if (currentPlanet.position.z > 10) {
+                scene.remove(currentPlanet);
+                currentPlanet = null;
+            }
+        }
+
+        if (nextPlanet) {
+            const nextScaleFactor = 0.5 + (score / 1000); // Half the scaling rate of the current planet
+            nextPlanet.scale.set(nextScaleFactor, nextScaleFactor, nextScaleFactor);
+
+            // Move the next planet forward slower than the current planet
+            nextPlanet.position.z += 0.01; // Slower forward movement
+            if (nextPlanet.position.z > 10) {
+                scene.remove(nextPlanet);
+                nextPlanet = null;
+            }
+        }
+    }
+
+    // Atualizar objetos e planetas
     function updateObjects() {
         asteroids.forEach((asteroid, index) => {
             asteroid.position.z += asteroidSpeed;
@@ -207,6 +315,12 @@ export function startAsteroidGame() {
                 scene.remove(coin);
                 coins.splice(index, 1);
                 coinExists = false;
+
+                // Simulate a speed-up effect by increasing asteroid speed temporarily
+                asteroidSpeed += 0.2;
+                setTimeout(() => {
+                    asteroidSpeed -= 0.2; // Revert the speed after a short duration
+                }, 1000);
             }
         });
 
@@ -219,11 +333,12 @@ export function startAsteroidGame() {
         }
 
         // Aumentar dificuldade com base na pontuação
-        if (score >= level * 25) { // Aumenta o nível a cada 25 pontos
-            level++;
-            asteroidSpeed += 0.1; // Aumenta a velocidade dos asteroides
-            for (let i = 0; i < 3; i++) spawnAsteroidOrCoin(); // Adiciona mais asteroides
+        if (score >= level * 100) { // Aumenta o nível a cada 100 pontos
+            levelUp();
         }
+
+        // Update the planets' sizes and positions
+        updatePlanetSize();
     }
 
     // Função de pausa

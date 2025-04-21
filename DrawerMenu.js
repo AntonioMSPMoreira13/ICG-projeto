@@ -40,8 +40,8 @@ export function Drawermenu(scene, planets, orbits) {
     const speedSlider = document.createElement('input');
     speedSlider.type = 'range';
     speedSlider.min = '0';
-    speedSlider.max = '2';
-    speedSlider.step = '0.1';
+    speedSlider.max = '100';
+    speedSlider.step = '1';
     speedSlider.value = '1';
     speedSlider.oninput = () => {
         const speedMultiplier = parseFloat(speedSlider.value);

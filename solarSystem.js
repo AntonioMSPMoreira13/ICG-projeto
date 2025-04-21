@@ -4,7 +4,6 @@ export function createSolarSystem(scene) {
     const sundiameter = 5.0; // Reduce the Sun's size for better scaling
 
     // Carregar texturas
-    //obtidas de https://www.fab.com/listings/f6df77fc-df73-4d6e-aab1-e0ccc2261a59
     const textureLoader = new THREE.TextureLoader();
     const textures = {
         sun: textureLoader.load('texture/Solar_sys/Sun.jpg'),
@@ -56,14 +55,14 @@ export function createSolarSystem(scene) {
     const orbits = [];
 
     const planetData = [
-        { name: 'Mercury', texture: textures.mercury, distance: sundiameter + 8, size: 0.4, speed: 0.04, rotationSpeed: 0.005, clockwise: false },
-        { name: 'Venus', texture: textures.venus, distance: sundiameter + 12, size: 0.9, speed: 0.03, rotationSpeed: 0.002, clockwise: true },
-        { name: 'Earth', texture: textures.earth, distance: sundiameter + 16, size: 1.0, speed: 0.02, rotationSpeed: 0.01, clockwise: false, hasMoon: true },
-        { name: 'Mars', texture: textures.mars, distance: sundiameter + 22, size: 0.7, speed: 0.015, rotationSpeed: 0.008, clockwise: false },
-        { name: 'Jupiter', texture: textures.jupiter, distance: sundiameter + 60, size: 3.5, speed: 0.008, rotationSpeed: 0.02, clockwise: false },
-        { name: 'Saturn', texture: textures.saturn, distance: sundiameter + 100, size: 2.8, speed: 0.006, rotationSpeed: 0.018, clockwise: false },
-        { name: 'Uranus', texture: textures.uranus, distance: sundiameter + 150, size: 2.0, speed: 0.004, rotationSpeed: 0.01, clockwise: true },
-        { name: 'Neptune', texture: textures.neptune, distance: sundiameter + 200, size: 1.9, speed: 0.002, rotationSpeed: 0.012, clockwise: false }
+        { name: 'Mercury', texture: textures.mercury, distance: sundiameter + 8, size: 0.4, speed: 0.0001, rotationSpeed: 0.0002, clockwise: false },
+        { name: 'Venus', texture: textures.venus, distance: sundiameter + 12, size: 0.9, speed: 0.00007, rotationSpeed: 0.0001, clockwise: true },
+        { name: 'Earth', texture: textures.earth, distance: sundiameter + 16, size: 1.0, speed: 0.00005, rotationSpeed: 0.001, clockwise: false, hasMoon: true },
+        { name: 'Mars', texture: textures.mars, distance: sundiameter + 22, size: 0.7, speed: 0.00003, rotationSpeed: 0.0008, clockwise: false },
+        { name: 'Jupiter', texture: textures.jupiter, distance: sundiameter + 60, size: 3.5, speed: 0.00001, rotationSpeed: 0.002, clockwise: false },
+        { name: 'Saturn', texture: textures.saturn, distance: sundiameter + 100, size: 2.8, speed: 0.000008, rotationSpeed: 0.0018, clockwise: false },
+        { name: 'Uranus', texture: textures.uranus, distance: sundiameter + 150, size: 2.0, speed: 0.000004, rotationSpeed: 0.001, clockwise: true },
+        { name: 'Neptune', texture: textures.neptune, distance: sundiameter + 200, size: 1.9, speed: 0.000002, rotationSpeed: 0.0012, clockwise: false }
     ];
 
     let paused = false; // Pause state
@@ -130,12 +129,13 @@ export function createSolarSystem(scene) {
             moon.name = 'Moon';
             scene.add(moon);
 
-            // Attach the Moon to the Earth
             planetDataEntry.moon = {
                 mesh: moon,
                 distance: 3, // Moon's orbit radius
                 angle: 0, // Initial orbital angle
-                speed: 0.05 // Moon's orbital speed
+                speed: 0.00027, // Realistic Moon orbital speed (27.3 days per orbit, scaled down)
+                baseSpeed: 0.00027,
+                rotationSpeed: 0.00027 // Realistic Moon rotation speed (synchronous rotation)
             };
         }
 
@@ -185,7 +185,10 @@ export function animateSolarSystem(planets, paused) {
                     moonX + planet.mesh.position.x,
                     planet.mesh.position.y,
                     moonZ + planet.mesh.position.z
-                ); // Atualizar posição da Lua relativa à Terra
+                );
+
+                // Synchronous rotation of the Moon
+                planet.moon.mesh.rotation.y += planet.moon.rotationSpeed;
             }
         });
     }
