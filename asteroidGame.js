@@ -1,36 +1,30 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { mergeVertices } from 'https://threejs.org/examples/jsm/utils/BufferGeometryUtils.js'; // Use URL for import
+
 
 let gameActive = false; // Flag to track if the game is active
 let gamePaused = false; // Flag to track if the game is paused
 
 // Function to generate a procedural asteroid
 function createProceduralAsteroid() {
-    const geometry = new THREE.IcosahedronGeometry(1.2, 2); // Base geometry with subdivisions
-    const material = new THREE.MeshStandardMaterial({
-        color: 0x8b4513, // Brownish color for a rocky appearance
-        roughness: 0.8,
-        metalness: 0.2
-    });
-
-    // Apply noise to vertices for irregular shape
+    let geometry = new THREE.IcosahedronGeometry(1.2, 2);
+    geometry = geometry.toNonIndexed();
     const positionAttribute = geometry.attributes.position;
     for (let i = 0; i < positionAttribute.count; i++) {
         const x = positionAttribute.getX(i);
         const y = positionAttribute.getY(i);
         const z = positionAttribute.getZ(i);
-
-        const noise = (Math.random() - 0.5) * 0.5; // Random noise factor
+        const noise = (Math.random() - 0.5) * 0.5;
         positionAttribute.setXYZ(i, x + noise, y + noise, z + noise);
     }
-
-    // Merge vertices to fix holes
-    const mergedGeometry = mergeVertices(geometry);
-
-    mergedGeometry.computeVertexNormals(); // Recalculate normals for proper lighting
-    return new THREE.Mesh(mergedGeometry, material);
+    geometry.computeVertexNormals();
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x8b4513,
+        roughness: 0.8,
+        metalness: 0.2
+    });
+    return new THREE.Mesh(geometry, material);
 }
 
 // Exported function to start the asteroid game
@@ -85,10 +79,11 @@ export function startAsteroidGame() {
     scene.add(bottomLight);
 
     // Nave do jogador
-    const shipGeometry = new THREE.ConeGeometry(1, 2, 32);
-    const shipMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-    const ship = new THREE.Mesh(shipGeometry, shipMaterial);
-    ship.rotation.x = Math.PI / 2;
+    const shipShape = SHIP_SHAPES[selectedShipShape];
+    const shipGeometry = shipShape.geometry();
+    const shipMaterial = new THREE.MeshStandardMaterial({ color: shipShape.color });
+    const ship = shipGeometry;
+    ship.rotation.x = Math.PI * -0.5; // Rotate to face the camera
     ship.position.set(0, 0, 0);
     scene.add(ship);
 
@@ -538,6 +533,90 @@ export function startAsteroidGame() {
     });
 }
 
+// Ship shape options
+const SHIP_SHAPES = [
+    {
+        name: 'Classic',
+        geometry: () => new THREE.ConeGeometry(1, 2, 32),
+        color: 0x00ff00
+    },
+    {
+        name: 'Blocky',
+        geometry: () => new THREE.BoxGeometry(1.2, 2, 1.2),
+        color: 0x2196f3
+    },
+    {
+         name: 'Rocket',
+        geometry: () => {
+            const group = new THREE.Group();
+
+            // Body
+            const bodyGeo = new THREE.CapsuleGeometry(0.7, 1.5, 8, 16).toNonIndexed();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            group.add(body);
+
+            // Nose
+            const noseGeo = new THREE.ConeGeometry(0.7, 1, 24).toNonIndexed();
+            noseGeo.translate(0, 1.75, 0);
+            const noseMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+            const nose = new THREE.Mesh(noseGeo, noseMat);
+            group.add(nose);
+
+            // Window
+            const windowGeo = new THREE.SphereGeometry(0.25, 16, 16).toNonIndexed();
+            windowGeo.translate(0.4, 0.3, 0);
+            const windowMat = new THREE.MeshStandardMaterial({ color: 0x3399ff, emissive: 0x112244 });
+            const windowMesh = new THREE.Mesh(windowGeo, windowMat);
+            group.add(windowMesh);
+
+            // Fins
+            const finGeo = new THREE.BufferGeometry();
+            const finVertices = new Float32Array([
+                0, 0, 0,
+                0, 0.8, 0,
+                0.5, 0.4, 0
+            ]);
+            finGeo.setAttribute('position', new THREE.BufferAttribute(finVertices, 3));
+            finGeo.computeVertexNormals();
+            const finMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+
+            const fin1 = new THREE.Mesh(finGeo, finMat);
+            fin1.position.set(0.7, -1, 0);
+            group.add(fin1);
+
+            const fin2 = new THREE.Mesh(finGeo.clone(), finMat);
+            fin2.rotation.y = Math.PI;
+            fin2.position.set(-0.7, -1, 0);
+            group.add(fin2);
+
+            const fin3 = new THREE.Mesh(finGeo.clone(), finMat);
+            fin3.rotation.y = Math.PI / 2;
+            fin3.position.set(0, -1, 0.7);
+            group.add(fin3);
+
+            const fin4 = new THREE.Mesh(finGeo.clone(), finMat);
+            fin4.rotation.y = -Math.PI / 2;
+            fin4.position.set(0, -1, -0.7);
+            group.add(fin4);
+
+            // Thruster
+            const flameGeo = new THREE.ConeGeometry(0.25, 0.5, 16).toNonIndexed();
+            flameGeo.rotateX(Math.PI);
+            flameGeo.translate(0, -1.7, 0);
+            const flameMat = new THREE.MeshStandardMaterial({ color: 0xffa500, emissive: 0xff6600 });
+            const flame = new THREE.Mesh(flameGeo, flameMat);
+            group.add(flame);
+
+            group.rotation.y = Math.PI;
+            return group;
+        },
+        color: 0xff0000 // For fins and nose
+    }
+];
+
+let selectedShipShape = 0; // Default to Classic
+
 export function startAsteroidGameMenu() {
     // Limpar o conteúdo atual da página
     document.body.innerHTML = '';
@@ -568,7 +647,7 @@ export function startAsteroidGameMenu() {
     resetButton.onclick = () => {
         localStorage.setItem('highScores', JSON.stringify([0, 0, 0, 0, 0])); // Reseta os high scores para 0
         const highScoreList = document.getElementById('highScoreList');
-        highScoreList.innerHTML = '<li>0</li><li>0</li><li>0</li><li>0</li><li>0</li>'; // Atualiza a lista na interface
+        highScoreList.innerHTML = '<li>0</li><li>0</li><li>0</li><li>0</li><li>0</li>';
     };
     highScoreSection.appendChild(resetButton);
     menu.appendChild(highScoreSection);
@@ -581,6 +660,36 @@ export function startAsteroidGameMenu() {
     title.className = 'menu-title'; // Use class for styling
     title.innerText = 'Asteroid Game Menu';
     buttonSection.appendChild(title);
+
+    // --- Ship selection ---
+    const shipSelectLabel = document.createElement('div');
+    shipSelectLabel.innerText = 'Choose your ship:';
+    shipSelectLabel.style.color = 'white';
+    shipSelectLabel.style.fontSize = '20px';
+    shipSelectLabel.style.marginBottom = '10px';
+    buttonSection.appendChild(shipSelectLabel);
+
+    const shipSelectContainer = document.createElement('div');
+    shipSelectContainer.style.display = 'flex';
+    shipSelectContainer.style.gap = '16px';
+    shipSelectContainer.style.marginBottom = '20px';
+
+    SHIP_SHAPES.forEach((shape, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'menu-button';
+        btn.innerText = shape.name;
+        btn.style.background = idx === selectedShipShape ? '#888' : '#444';
+        btn.onclick = () => {
+            selectedShipShape = idx;
+            // Update button highlights
+            Array.from(shipSelectContainer.children).forEach((b, i) => {
+                b.style.background = i === idx ? '#888' : '#444';
+            });
+        };
+        shipSelectContainer.appendChild(btn);
+    });
+    buttonSection.appendChild(shipSelectContainer);
+    // --- End ship selection ---
 
     const startButton = document.createElement('button');
     startButton.className = 'menu-button'; // Use class for styling

@@ -153,6 +153,7 @@
                 camera.position.set(0, 50, 180); // Reset camera position
                 controls.target.set(0, 0, 0); // Reset OrbitControls target
                 controls.update();
+                removePlanetInfoCard(); // Remove the planet info card if it exists
             } else {
                 // Follow the clicked planet
                 followPlanet(name);
@@ -177,6 +178,11 @@
 
             if (intersects.length > 0) {
                 const object = intersects[0].object;
+
+                // Call the userData.onClick handler if it exists
+                if (object.userData && typeof object.userData.onClick === 'function') {
+                    object.userData.onClick();
+                }
 
                 // Reset camera if the Sun is clicked and no planet is selected
                 if (object.name === "Sun" && targetPlanet === null) {
@@ -210,6 +216,48 @@
 
             // Hide the reset camera button
             document.getElementById('resetCameraButton').style.display = 'none';
+        });
+
+        // Helper to show planet info card
+        function showPlanetInfoCard(planetData) {
+            // Remove any existing card
+            let oldCard = document.getElementById('planet-info-card');
+            if (oldCard) oldCard.remove();
+
+            // Create card
+            const card = document.createElement('div');
+            card.id = 'planet-info-card';
+
+            card.innerHTML = `
+                <h2>${planetData.name}</h2>
+                <ul>
+                    <li><b>Distance from Sun:</b> ${planetData.distance ?? 'Unknown'}</li>
+                    <li><b>Size:</b> ${planetData.size ?? 'Unknown'}</li>
+                    <li><b>Orbital Speed:</b> ${planetData.speed ?? 'Unknown'}</li>
+                    <li><b>Rotation Speed:</b> ${planetData.rotationSpeed ?? 'Unknown'}</li>
+                    ${planetData.hasMoon ? '<li><b>Has Moon</b></li>' : ''}
+                </ul>
+                <button id="close-planet-info">Close</button>
+            `;
+
+            document.body.appendChild(card);
+
+            document.getElementById('close-planet-info').onclick = () => card.remove();
+        }
+
+        function removePlanetInfoCard() {
+            let card = document.getElementById('planet-info-card');
+            if (card) card.remove();
+        }
+
+        // Listen for planet info events
+        window.addEventListener('planetInfo', (e) => {
+            showPlanetInfoCard(e.detail);
+        });
+
+        // Remove card when resetting camera
+        document.getElementById('resetCameraButton').addEventListener('click', () => {
+            removePlanetInfoCard();
         });
 
         // loop de animação

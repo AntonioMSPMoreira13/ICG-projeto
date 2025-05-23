@@ -94,8 +94,8 @@ export function createSolarSystem(scene) {
         // Detectar clique em qualquer planeta
         planet.userData = {
             onClick: () => {
-                // Dispatch an event to handle the planet click
-                const event = new CustomEvent('objectClicked', { detail: { name: data.name, resetCamera: false } });
+                // Dispatch an event with the planet's data
+                const event = new CustomEvent('planetInfo', { detail: { ...data } });
                 window.dispatchEvent(event);
             }
         };
@@ -133,9 +133,9 @@ export function createSolarSystem(scene) {
                 mesh: moon,
                 distance: 3, // Moon's orbit radius
                 angle: 0, // Initial orbital angle
-                speed: 0.00027, // Realistic Moon orbital speed (27.3 days per orbit, scaled down)
-                baseSpeed: 0.00027,
-                rotationSpeed: 0.00027 // Realistic Moon rotation speed (synchronous rotation)
+                speed: 0.000015, // Slower than Earth's orbit
+                baseSpeed: 0.000015,
+                rotationSpeed: 0.000015 // Synchronous rotation, also slow
             };
         }
 

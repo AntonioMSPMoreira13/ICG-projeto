@@ -66,7 +66,7 @@ export function Drawermenu(scene, planets, orbits) {
 
     // Criar botão para iniciar o menu do jogo dos asteroides
     const asteroidGameButton = document.createElement('button');
-    asteroidGameButton.className = 'asteroid-game-button';
+    asteroidGameButton.className = 'orbit-toggle-button';
     asteroidGameButton.innerText = 'Asteroid Game';
     asteroidGameButton.onclick = () => {
         document.body.innerHTML = ''; // Limpa o conteúdo atual
