@@ -97,8 +97,13 @@ export function startAsteroidGame() {
     function spawnAsteroidOrCoin() {
         const isCoin = !coinExists && Math.random() > 0.7; // Only one coin at a time
         if (isCoin) {
-            const material = new THREE.MeshStandardMaterial({ color: 0xffff00 }); // Yellow for coin
-            const coin = new THREE.Mesh(coinGeometry, material);
+            const coinmaterial = new THREE.MeshStandardMaterial({
+                color: 0xffd700,
+                metalness: 1.0,
+                roughness: 0.2,
+                emissive: 0x332200
+            });
+            const coin = new THREE.Mesh(coinGeometry, coinmaterial);
             coin.userData = { isCoin: true };
             coin.position.set(
                 (Math.random() - 0.5) * 20,
@@ -514,8 +519,15 @@ export function startAsteroidGame() {
         // Movimentação da nave
         if (controls.w) ship.position.y += 0.1;
         if (controls.s) ship.position.y -= 0.1;
-        if (controls.a) ship.position.x -= 0.1;
-        if (controls.d) ship.position.x += 0.1;
+        if (controls.a) {
+            ship.position.x -= 0.1;
+            ship.rotation.y += 0.025;
+        } else if (controls.d) {
+            ship.position.x += 0.1;
+            ship.rotation.y -= 0.025;
+        } else {
+            ship.rotation.z = 0;
+        }
 
         // Atualizar objetos (asteroides e moedas)
         updateObjects();
@@ -536,83 +548,119 @@ export function startAsteroidGame() {
 // Ship shape options
 const SHIP_SHAPES = [
     {
-        name: 'Classic',
-        geometry: () => new THREE.ConeGeometry(1, 2, 32),
-        color: 0x00ff00
-    },
-    {
-        name: 'Blocky',
-        geometry: () => new THREE.BoxGeometry(1.2, 2, 1.2),
-        color: 0x2196f3
-    },
-    {
-         name: 'Rocket',
+        name: 'Rocket',
         geometry: () => {
             const group = new THREE.Group();
 
+            const textureLoader = new THREE.TextureLoader();
+            const metalTexture = textureLoader.load('texture/Rocket.webp');
+
+            // Metal-like material options
+            const metalWhite = new THREE.MeshStandardMaterial({ map: metalTexture, metalness: 1, roughness: 0.3 });
+            const metalRed = new THREE.MeshStandardMaterial({ color: 0xff0000, metalness: 0.7, roughness: 0.3 });
+            const metalBlue = new THREE.MeshStandardMaterial({ color: 0x3399ff, emissive: 0x112244, metalness: 0.3, roughness: 0.2 });
+            const metalBlack = new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 0.9, roughness: 0.1 });
+            const flameMat = new THREE.MeshStandardMaterial({ color: 0xffa500, emissive: 0xff6600, metalness: 0.2, roughness: 0.1 });
+
             // Body
-            const bodyGeo = new THREE.CapsuleGeometry(0.7, 1.5, 8, 16).toNonIndexed();
-            const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            group.add(body);
+            const bodyGeo = new THREE.CylinderGeometry(0.7, 0.7, 2.5, 16).toNonIndexed();
+            group.add(new THREE.Mesh(bodyGeo, metalWhite));
 
             // Nose
             const noseGeo = new THREE.ConeGeometry(0.7, 1, 24).toNonIndexed();
             noseGeo.translate(0, 1.75, 0);
-            const noseMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-            const nose = new THREE.Mesh(noseGeo, noseMat);
-            group.add(nose);
+            group.add(new THREE.Mesh(noseGeo, metalRed));
 
-            // Window
-            const windowGeo = new THREE.SphereGeometry(0.25, 16, 16).toNonIndexed();
-            windowGeo.translate(0.4, 0.3, 0);
-            const windowMat = new THREE.MeshStandardMaterial({ color: 0x3399ff, emissive: 0x112244 });
-            const windowMesh = new THREE.Mesh(windowGeo, windowMat);
-            group.add(windowMesh);
+            // Windows
+            const windowGeo1 = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16).toNonIndexed();
+            windowGeo1.translate(-0.5, 0.7, 0);
+            windowGeo1.rotateX(Math.PI);
+            windowGeo1.rotateZ(-Math.PI / 2);
+            group.add(new THREE.Mesh(windowGeo1, metalBlue));
+
+            const windowGeo2 = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16).toNonIndexed();
+            windowGeo2.translate(0, -0.7, 0);
+            windowGeo2.rotateX(Math.PI);
+            windowGeo2.rotateZ(-Math.PI / 2);
+            group.add(new THREE.Mesh(windowGeo2, metalBlue));
 
             // Fins
-            const finGeo = new THREE.BufferGeometry();
-            const finVertices = new Float32Array([
-                0, 0, 0,
-                0, 0.8, 0,
-                0.5, 0.4, 0
-            ]);
-            finGeo.setAttribute('position', new THREE.BufferAttribute(finVertices, 3));
-            finGeo.computeVertexNormals();
-            const finMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+            const finShape = new THREE.BoxGeometry(0.4, 0.7, 0.1);
+            finShape.rotateZ(Math.PI / 4);
 
-            const fin1 = new THREE.Mesh(finGeo, finMat);
-            fin1.position.set(0.7, -1, 0);
+            const fin1 = new THREE.Mesh(finShape, metalRed);
+            fin1.position.set(0.7, -1.25, -0.1);
             group.add(fin1);
 
-            const fin2 = new THREE.Mesh(finGeo.clone(), finMat);
+            const fin2 = new THREE.Mesh(finShape.clone(), metalRed);
             fin2.rotation.y = Math.PI;
-            fin2.position.set(-0.7, -1, 0);
+            fin2.position.set(-0.7, -1.25, 0);
             group.add(fin2);
 
-            const fin3 = new THREE.Mesh(finGeo.clone(), finMat);
+            const fin3 = new THREE.Mesh(finShape.clone(), metalRed);
             fin3.rotation.y = Math.PI / 2;
-            fin3.position.set(0, -1, 0.7);
+            fin3.rotation.z = Math.PI / 2;
+            fin3.position.set(0, -1.25, 0.7);
             group.add(fin3);
 
-            const fin4 = new THREE.Mesh(finGeo.clone(), finMat);
+            const fin4 = new THREE.Mesh(finShape.clone(), metalRed);
             fin4.rotation.y = -Math.PI / 2;
-            fin4.position.set(0, -1, -0.7);
+            fin4.rotation.z = Math.PI / 2;
+            fin4.position.set(0, -1.25, -0.7);
             group.add(fin4);
 
             // Thruster
+            const thrusterGeo = new THREE.ConeGeometry(0.4, 1, 16).toNonIndexed();
+            thrusterGeo.translate(0, -1.1, 0);
+            group.add(new THREE.Mesh(thrusterGeo, metalBlack));
+
             const flameGeo = new THREE.ConeGeometry(0.25, 0.5, 16).toNonIndexed();
             flameGeo.rotateX(Math.PI);
             flameGeo.translate(0, -1.7, 0);
-            const flameMat = new THREE.MeshStandardMaterial({ color: 0xffa500, emissive: 0xff6600 });
-            const flame = new THREE.Mesh(flameGeo, flameMat);
-            group.add(flame);
+            group.add(new THREE.Mesh(flameGeo, flameMat));
 
             group.rotation.y = Math.PI;
             return group;
         },
-        color: 0xff0000 // For fins and nose
-    }
+        color: 0xff0000
+    },
+    {
+        name: 'Blocky',
+        geometry: () => {
+            const blockyShip = new THREE.Group();
+
+            // Central glowing sphere
+            const lightSphereGeo = new THREE.SphereGeometry(1.2, 32, 32);
+            const lightSphereMat = new THREE.MeshStandardMaterial({ color: 0x00ccff, emissive: 0x00ccff, emissiveIntensity: 1.5, metalness: 0.3, roughness: 0.2 });
+            const lightSphere = new THREE.Mesh(lightSphereGeo, lightSphereMat);
+            blockyShip.add(lightSphere);
+
+            // Cubes around the sphere
+            const cubeGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+            const cubeMat = new THREE.MeshStandardMaterial({ color: 0xff00ff, metalness: 1, roughness: 0.1 });
+
+            const cubeShell = new THREE.Group();
+            const spacing = 1.0;
+            const count = 3;
+
+            for (let x = -count; x <= count; x++) {
+              for (let y = -count; y <= count; y++) {
+                for (let z = -count; z <= count; z++) {
+                  const distance = Math.sqrt(x * x + y * y + z * z);
+                  if (distance > 1.5 && distance < 3.5) {
+                    const cube = new THREE.Mesh(cubeGeo, cubeMat);
+                    cube.position.set(x * spacing, y * spacing, z * spacing);
+                    cubeShell.add(cube);
+                  }
+                }
+              }
+            }
+
+            blockyShip.add(cubeShell);
+            blockyShip.rotation.y = Math.PI;
+            return blockyShip;
+        }
+    },
 ];
 
 let selectedShipShape = 0; // Default to Classic
