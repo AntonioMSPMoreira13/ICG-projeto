@@ -192,7 +192,7 @@ export function startExplorationGame() {
     camera.position.set(0, 120, 800 - 350);
     camera.lookAt(rocket.position);
 
-    // Missões (igual antes)
+    // Missões
     missions = [
         { id: 1, description: "Visite Mercúrio", target: "Mercury", completed: false },
         { id: 2, description: "Visite Vênus", target: "Venus", completed: false },

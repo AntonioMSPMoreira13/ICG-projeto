@@ -166,7 +166,6 @@ export function createSolarSystem(scene) {
     return { planets, orbits, sun, paused };
 }
 
-// Atualizar o loop de animação para lidar com pausa e órbita da Lua
 export function animateSolarSystem(planets, paused) {
     if (!paused) {
         planets.forEach(planet => {
