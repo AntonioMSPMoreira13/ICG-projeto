@@ -1,4 +1,5 @@
 import { startAsteroidGameMenu } from './asteroidGame.js';
+import { startExplorationGame } from './explorationGame.js';
 
 export function Drawermenu(scene, planets, orbits) {
     // Obter o container 3D
@@ -40,7 +41,7 @@ export function Drawermenu(scene, planets, orbits) {
     const speedSlider = document.createElement('input');
     speedSlider.type = 'range';
     speedSlider.min = '0';
-    speedSlider.max = '100';
+    speedSlider.max = '50';
     speedSlider.step = '1';
     speedSlider.value = '1';
     speedSlider.oninput = () => {
@@ -73,4 +74,14 @@ export function Drawermenu(scene, planets, orbits) {
         startAsteroidGameMenu(); // Navega para o menu do jogo dos asteroides
     };
     drawer.appendChild(asteroidGameButton);
+
+    const explorationGameButton = document.createElement('button');
+    explorationGameButton.className = 'orbit-toggle-button';
+    explorationGameButton.innerText = 'Exploration Game';
+    explorationGameButton.onclick = () => {
+        document.body.innerHTML = '';
+        startExplorationGame(); // chama o novo jogo
+    };
+    drawer.appendChild(explorationGameButton);
+
 }

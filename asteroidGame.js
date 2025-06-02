@@ -8,22 +8,29 @@ let gamePaused = false; // Flag to track if the game is paused
 
 // Function to generate a procedural asteroid
 function createProceduralAsteroid() {
-    let geometry = new THREE.IcosahedronGeometry(1.2, 2);
+    let geometry = new THREE.IcosahedronGeometry(1, 3);
     geometry = geometry.toNonIndexed();
     const positionAttribute = geometry.attributes.position;
+
+    // Apply stronger noise for chunkiness
+    const noiseScale = 0.5;
     for (let i = 0; i < positionAttribute.count; i++) {
         const x = positionAttribute.getX(i);
         const y = positionAttribute.getY(i);
         const z = positionAttribute.getZ(i);
-        const noise = (Math.random() - 0.5) * 0.5;
-        positionAttribute.setXYZ(i, x + noise, y + noise, z + noise);
+        const randomFactor = (Math.random() - 0.5) * noiseScale;
+        positionAttribute.setXYZ(i, x + randomFactor, y + randomFactor, z + randomFactor);
     }
+
     geometry.computeVertexNormals();
+
     const material = new THREE.MeshStandardMaterial({
-        color: 0x8b4513,
-        roughness: 0.8,
-        metalness: 0.2
+        color: 0x5a3b2e, // darker rocky tone
+        roughness: 0.9,
+        metalness: 0.1,
+        flatShading: true
     });
+
     return new THREE.Mesh(geometry, material);
 }
 
@@ -69,14 +76,38 @@ export function startAsteroidGame() {
     const ambientLight = new THREE.AmbientLight(0x404040, 1); // Reduced intensity
     scene.add(ambientLight);
 
-    // Add soft white lights above and below the camera
-    const topLight = new THREE.DirectionalLight(0xffffff, 0.5); // Light above the camera
-    topLight.position.set(0, 50, 0);
+    const lightIntensity = 0.2;
+    // Top
+    const topLight = new THREE.DirectionalLight(0xffffff, lightIntensity);
+    topLight.position.set(0, 50, -25);
+    topLight.target.position.set(0, 0, -25);
     scene.add(topLight);
-
-    const bottomLight = new THREE.DirectionalLight(0xffffff, 0.5); // Light below the camera
-    bottomLight.position.set(0, -50, 0);
+    scene.add(topLight.target);
+    // Bottom
+    const bottomLight = new THREE.DirectionalLight(0xffffff, lightIntensity);
+    bottomLight.position.set(0, -50, -25);
+    bottomLight.target.position.set(0, 0, -25);
     scene.add(bottomLight);
+    scene.add(bottomLight.target);
+    // Left
+    const leftLight = new THREE.DirectionalLight(0xffffff, lightIntensity);
+    leftLight.position.set(-50, 0, -25);
+    leftLight.target.position.set(0, 0, -25);
+    scene.add(leftLight);
+    scene.add(leftLight.target);
+    // Right
+    const rightLight = new THREE.DirectionalLight(0xffffff, lightIntensity);
+    rightLight.position.set(50, 0, -25);
+    rightLight.target.position.set(0, 0, -25);
+    scene.add(rightLight);
+    scene.add(rightLight.target);
+    // Behind ship
+    const rearLight = new THREE.DirectionalLight(0xffffff, lightIntensity);
+    rearLight.position.set(0, 0, 10);
+    rearLight.target.position.set(0, 0, -25);
+    scene.add(rearLight);
+    scene.add(rearLight.target);
+
 
     // Nave do jogador
     const shipShape = SHIP_SHAPES[selectedShipShape];
@@ -229,59 +260,39 @@ export function startAsteroidGame() {
     };
 
     const planetOrder = [
-        'Neptune', 'Uranus', 'Saturn', 'Jupiter', 'Mars', 'Earth', 'Venus', 'Mercury', 'Sun'
+        'Neptune', 'Uranus', 'Saturn', 'Jupiter', 'Mars', 'Earth', 'Venus', 'Mercury'
     ];
 
     let currentPlanetIndex = 0;
     let currentPlanet = null;
-    let nextPlanet = null;
 
-    // Function to add a planet for the current level
     function addPlanetForLevel() {
         if (currentPlanet) {
-            scene.remove(currentPlanet); // Remove the previous planet
+            scene.remove(currentPlanet);
+            currentPlanet = null;
         }
 
         const planetName = planetOrder[currentPlanetIndex];
-        const planetTexture = planetTextures[planetName];
-        if (!planetTexture) {
-            console.error(`Texture for planet ${planetName} not loaded.`);
+        const texture = planetTextures[planetName];
+
+        if (!texture) {
+            console.warn(`Texture for planet ${planetName} not found.`);
             return;
         }
 
-        const planetSize = planetName === 'Sun' ? 10 : 3; // Sun is larger
-        const planetGeometry = new THREE.SphereGeometry(planetSize, 32, 32);
-        const planetMaterial = new THREE.MeshStandardMaterial({ map: planetTexture });
-        currentPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
+        const geometry = new THREE.SphereGeometry(3, 32, 32);
+        const material = new THREE.MeshStandardMaterial({
+            map: texture,
+            emissive: new THREE.Color(0xffffff),
+            emissiveMap: texture,
+            emissiveIntensity: 0.01
+        });
 
-        // Position the planet to the side as a background
-        const sidePosition = Math.random() > 0.5 ? 30 : -30; // Randomly choose left or right
-        currentPlanet.position.set(sidePosition, 0, -50); // Position the planet to the side
+        currentPlanet = new THREE.Mesh(geometry, material);
+        currentPlanet.scale.set(0.01, 0.01, 0.01); // Start small
+        const sideX = Math.random() > 0.5 ? 30 : -30;
+        currentPlanet.position.set(sideX, 0, -50);
         scene.add(currentPlanet);
-
-        // Add the next planet for the upcoming level
-        addNextPlanet(sidePosition); // Pass the same side position
-    }
-
-    // Function to add the next planet for the upcoming level
-    function addNextPlanet(sidePosition) {
-        if (nextPlanet) {
-            scene.remove(nextPlanet); // Remove the previous next planet
-        }
-
-        const nextPlanetIndex = currentPlanetIndex + 1;
-        if (nextPlanetIndex < planetOrder.length) {
-            const planetName = planetOrder[nextPlanetIndex];
-            const planetTexture = planetTextures[planetName];
-            const planetSize = planetName === 'Sun' ? 10 : 3; // Sun is larger
-            const planetGeometry = new THREE.SphereGeometry(planetSize, 32, 32);
-            const planetMaterial = new THREE.MeshStandardMaterial({ map: planetTexture });
-            nextPlanet = new THREE.Mesh(planetGeometry, planetMaterial);
-
-            // Position the next planet on the same side as the current planet
-            nextPlanet.position.set(sidePosition, 0, -100); // Position the next planet further back
-            scene.add(nextPlanet);
-        }
     }
 
     // Call this function when the level changes
@@ -294,7 +305,6 @@ export function startAsteroidGame() {
             currentPlanetIndex++; // Move to the next planet
             const previousSidePosition = currentPlanet ? currentPlanet.position.x : 0; // Safely get the side position
             addPlanetForLevel(); // Add the new planet
-            addNextPlanet(previousSidePosition); // Add the next planet on the same side
         } else {
             // If the player reaches the Sun, stop adding planets
             currentPlanetIndex = planetOrder.length - 1;
@@ -303,27 +313,33 @@ export function startAsteroidGame() {
 
     // Update the planets' sizes and positions
     function updatePlanetSize() {
-        if (currentPlanet) {
-            const scaleFactor = 1 + score / 500; // Slower scaling factor
-            currentPlanet.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        const planetIndex = Math.floor(score / 100);
+        const showPlanet = planetIndex % 2 === 1; // Show planet only for odd 100s like 100–199, 300–399...
 
-            // Move the current planet forward even slower
-            currentPlanet.position.z += 0.02; // Very slow forward movement
-            if (currentPlanet.position.z > 10) {
+        if (showPlanet && planetIndex < planetOrder.length) {
+            if (currentPlanetIndex !== planetIndex) {
+                currentPlanetIndex = planetIndex;
+                addPlanetForLevel();
+            }
+
+            const progress = (score % 100) / 100;
+
+            if (currentPlanet) {
+                const easedProgress = Math.pow(progress, 2.5); // ease-in curve
+                const scale = 0.01 + easedProgress * 3;
+                currentPlanet.scale.set(scale, scale, scale);
+                currentPlanet.position.z = -50 + progress * 70;
+
+                if (progress >= 1) {
+                    scene.remove(currentPlanet);
+                    currentPlanet = null;
+                }
+            }
+        } else {
+            // Remove current planet if not in the display range
+            if (currentPlanet) {
                 scene.remove(currentPlanet);
                 currentPlanet = null;
-            }
-        }
-
-        if (nextPlanet) {
-            const nextScaleFactor = 0.5 + (score / 1000); // Half the scaling rate of the current planet
-            nextPlanet.scale.set(nextScaleFactor, nextScaleFactor, nextScaleFactor);
-
-            // Move the next planet forward slower than the current planet
-            nextPlanet.position.z += 0.01; // Slower forward movement
-            if (nextPlanet.position.z > 10) {
-                scene.remove(nextPlanet);
-                nextPlanet = null;
             }
         }
     }
@@ -347,7 +363,8 @@ export function startAsteroidGame() {
 
         coins.forEach((coin, index) => {
             coin.position.z += asteroidSpeed;
-            coin.rotation.y += 0.1; // Add spinning animation to the coin
+            coin.rotation.z += 0.02;
+             // Add spinning animation to the coin
             if (coin.position.z > 10) {
                 scene.remove(coin);
                 coins.splice(index, 1);
@@ -528,6 +545,11 @@ export function startAsteroidGame() {
         } else {
             ship.rotation.z = 0;
         }
+
+        // Limit ship movement to asteroid spawn bounds
+        ship.position.x = Math.max(-10, Math.min(10, ship.position.x));
+        ship.position.y = Math.max(-10, Math.min(10, ship.position.y));
+
 
         // Atualizar objetos (asteroides e moedas)
         updateObjects();
